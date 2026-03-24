@@ -23,7 +23,7 @@ export default {
   moduleFileExtensions: ['ts', 'js'],
   preset: 'ts-jest',
   reporters: ['default'],
-  resolver: 'ts-jest-resolver',
+  // resolver: 'ts-jest-resolver',
   testEnvironment: 'node',
   testMatch: ['**/*.test.ts'],
   testPathIgnorePatterns: ['/dist/', '/node_modules/'],
@@ -36,5 +36,8 @@ export default {
       }
     ]
   },
-  verbose: true
+  verbose: true,
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1'
+  }
 }
