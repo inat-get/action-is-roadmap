@@ -11,14 +11,6 @@ const config = {
     format: 'es',
     sourcemap: true
   },
-  external: [
-    '@actions/core',
-    '@actions/github',
-    '@actions/exec',
-    '@actions/io',
-    '@actions/http-client',
-    '@octokit/graphql'
-  ],
   plugins: [typescript(), nodeResolve({ preferBuiltins: true }), commonjs()]
 }
 
