@@ -1,23 +1,40 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+# action.yml
+name: 'Generate Roadmap'
+description: 'Generates Mermaid flowchart roadmap from GitHub Milestones, Issues and Dependencies'
+author: 'Ivan Shikhalev'
 
-# Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: 'git-branch'
+  color: 'blue'
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
+  github_token:
+    description: 'GitHub token for API access'
     required: true
-    default: '1000'
+  output_type:
+    description: 'Output target: file or wiki'
+    required: true
+    default: 'file'
+  output_path:
+    description: 'File path for output (when output_type=file)'
+    required: false
+    default: 'ROADMAP.md'
+  wiki_title:
+    description: 'Wiki page title (when output_type=wiki)'
+    required: false
+    default: 'Roadmap'
+  config_file:
+    description: 'Path to style configuration YAML'
+    required: false
+    default: '.github/roadmap-styles.yml'
+  exclude_label:
+    description: 'Label to exclude issues from roadmap'
+    required: false
+    default: ''
 
-# Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  diagram:
+    description: 'Generated Mermaid diagram code'
 
 runs:
   using: node24

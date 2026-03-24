@@ -1,27 +1,41 @@
+// src/main.ts
 import * as core from '@actions/core'
-import { wait } from './wait.js'
+import * as github from '@actions/github'
+import { fetchData } from './github.js'
+import { loadConfig } from './config.js'
+import { generateDiagram } from './mermaid.js'
+import { writeOutput } from './output.js'
 
-/**
- * The main function for the action.
- *
- * @returns Resolves when the action is complete.
- */
 export async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
+    const token = core.getInput('github_token', { required: true })
+    const outputType = core.getInput('output_type') as 'file' | 'wiki'
+    const outputPath = core.getInput('output_path')
+    const wikiTitle = core.getInput('wiki_title')
+    const configFile = core.getInput('config_file')
+    const excludeLabel = core.getInput('exclude_label') || null
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    core.info('Fetching data from GitHub...')
+    const { milestones, issues } = await fetchData(token, excludeLabel)
+    
+    core.info(`Found ${milestones.length} milestones, ${issues.length} issues`)
+    
+    if (issues.length === 0 && milestones.length === 0) {
+      core.warning('No data found to generate roadmap')
+    }
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    core.info('Loading configuration...')
+    const config = loadConfig(configFile)
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    core.info('Generating diagram...')
+    const diagram = generateDiagram(milestones, issues, config)
+    
+    core.info('Writing output...')
+    await writeOutput(diagram, outputType, outputPath, wikiTitle, token)
+    
+    core.setOutput('diagram', diagram)
+    core.info('Done!')
   } catch (error) {
-    // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
   }
 }
