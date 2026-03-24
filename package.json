@@ -23,7 +23,7 @@
   "dependencies": {
     "@actions/core": "^3.0.0",
     "@actions/github": "^9.0.0",
-    "@octokit/graphql": "^8.1.0"
+    "@octokit/graphql": "^9.0.3"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
