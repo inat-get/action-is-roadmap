@@ -1,4 +1,4 @@
-# Create a GitHub Action Using TypeScript
+# Action
 
 ![Linter](https://github.com/actions/typescript-action/actions/workflows/linter.yml/badge.svg)
 ![CI](https://github.com/actions/typescript-action/actions/workflows/ci.yml/badge.svg)
