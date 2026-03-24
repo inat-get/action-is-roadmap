@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "npm run format:write && npm run package",
-    "bundle": "rimraf ./dist && rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
+    "package": "rimraf ./dist && rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
+    "bundle": "npm run package",
     "format:write": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
