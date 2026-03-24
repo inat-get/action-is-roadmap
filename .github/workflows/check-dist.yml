@@ -68,7 +68,7 @@ jobs:
       # If `dist/` was different than expected, upload the expected version as a
       # workflow artifact.
       - if: ${{ failure() && steps.diff.outcome == 'failure' }}
-        name: Upload Artifact
+        name: Upload Artifact 7
         id: upload
         uses: actions/upload-artifact@v7
         with:
