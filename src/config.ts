@@ -46,10 +46,13 @@ export function loadConfig(configPath: string): StyleConfig {
     const parsed = yaml.load(content) as Partial<StyleConfig>
     return {
       colors: {
-        milestones: parsed.colors?.milestones || DEFAULT_CONFIG.colors.milestones,
+        milestones:
+          parsed.colors?.milestones || DEFAULT_CONFIG.colors.milestones,
         issues: {
-          open: parsed.colors?.issues?.open || DEFAULT_CONFIG.colors.issues.open,
-          closed: parsed.colors?.issues?.closed || DEFAULT_CONFIG.colors.issues.closed
+          open:
+            parsed.colors?.issues?.open || DEFAULT_CONFIG.colors.issues.open,
+          closed:
+            parsed.colors?.issues?.closed || DEFAULT_CONFIG.colors.issues.closed
         },
         arrows: {
           blocking:

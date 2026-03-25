@@ -22,7 +22,9 @@ jest.unstable_mockModule('../src/github.js', () => ({
 }))
 
 jest.unstable_mockModule('../src/mermaid.js', () => ({
-  generateDiagram: jest.fn<typeof generateDiagram>().mockReturnValue('graph TD\nI1[Issue]')
+  generateDiagram: jest
+    .fn<typeof generateDiagram>()
+    .mockReturnValue('graph TD\nI1[Issue]')
 }))
 
 jest.unstable_mockModule('../src/output.js', () => ({
@@ -41,9 +43,16 @@ jest.unstable_mockModule('../src/config.js', () => ({
   DEFAULT_CONFIG: {}
 }))
 
-const mockedFetchData = await import('../src/github.js') as jest.Mocked<typeof import('../src/github.js')>
-const mockedGenerateDiagram = await import('../src/mermaid.js') as jest.Mocked<typeof import('../src/mermaid.js')>
-const mockedWriteOutput = await import('../src/output.js') as jest.Mocked<typeof import('../src/output.js')>
+const mockedFetchData = (await import('../src/github.js')) as jest.Mocked<
+  typeof import('../src/github.js')
+>
+const mockedGenerateDiagram =
+  (await import('../src/mermaid.js')) as jest.Mocked<
+    typeof import('../src/mermaid.js')
+  >
+const mockedWriteOutput = (await import('../src/output.js')) as jest.Mocked<
+  typeof import('../src/output.js')
+>
 
 describe('main.ts', () => {
   beforeEach(() => {
@@ -74,29 +83,34 @@ describe('main.ts', () => {
 
   it('Successfully generates roadmap', async () => {
     const mockMilestones = [
-      { number: 1, title: 'v1.0', dueOn: '2024-01-15T00:00:00Z', state: 'open' as const }
+      {
+        number: 1,
+        title: 'v1.0',
+        dueOn: '2024-01-15T00:00:00Z',
+        state: 'open' as const
+      }
     ]
     const mockIssues = [
-      { 
-        number: 1, 
-        title: 'Feature A', 
-        state: 'open' as const, 
-        milestone: 'v1.0', 
-        labels: [], 
-        blockedBy: [] 
+      {
+        number: 1,
+        title: 'Feature A',
+        state: 'open' as const,
+        milestone: 'v1.0',
+        labels: [],
+        blockedBy: []
       }
     ]
 
-    mockedFetchData.fetchData.mockResolvedValue({ 
-      milestones: mockMilestones, 
-      issues: mockIssues 
+    mockedFetchData.fetchData.mockResolvedValue({
+      milestones: mockMilestones,
+      issues: mockIssues
     })
 
     await run()
 
     // Verify fetchData was called
     expect(mockedFetchData.fetchData).toHaveBeenCalledWith('fake-token', null)
-    
+
     // Verify generateDiagram was called
     expect(mockedGenerateDiagram.generateDiagram).toHaveBeenCalledWith(
       mockMilestones,
@@ -114,7 +128,10 @@ describe('main.ts', () => {
     )
 
     // Verify output was set
-    expect(core.setOutput).toHaveBeenCalledWith('diagram', 'graph TD\nI1[Issue]')
+    expect(core.setOutput).toHaveBeenCalledWith(
+      'diagram',
+      'graph TD\nI1[Issue]'
+    )
   })
 
   it('Handles exclude_label parameter', async () => {
@@ -134,7 +151,10 @@ describe('main.ts', () => {
 
     await run()
 
-    expect(mockedFetchData.fetchData).toHaveBeenCalledWith('fake-token', 'skip-roadmap')
+    expect(mockedFetchData.fetchData).toHaveBeenCalledWith(
+      'fake-token',
+      'skip-roadmap'
+    )
   })
 
   it('Sets failed status on error', async () => {
