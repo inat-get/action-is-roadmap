@@ -17,9 +17,9 @@ export async function run(): Promise<void> {
 
     core.info('Fetching data from GitHub...')
     const { milestones, issues } = await fetchData(token, excludeLabel)
-    
+
     core.info(`Found ${milestones.length} milestones, ${issues.length} issues`)
-    
+
     if (issues.length === 0 && milestones.length === 0) {
       core.warning('No data found to generate roadmap')
     }
@@ -29,10 +29,10 @@ export async function run(): Promise<void> {
 
     core.info('Generating diagram...')
     const diagram = generateDiagram(milestones, issues, config)
-    
+
     core.info('Writing output...')
     await writeOutput(diagram, outputType, outputPath, wikiTitle, token)
-    
+
     core.setOutput('diagram', diagram)
     core.info('Done!')
   } catch (error) {

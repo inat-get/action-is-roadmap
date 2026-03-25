@@ -8,20 +8,24 @@ export function generateDiagram(
   config: StyleConfig
 ): string {
   const lines: string[] = []
-  const milestoneMap = new Map(milestones.map(m => [m.title, m]))
-  
+  const milestoneMap = new Map(milestones.map((m) => [m.title, m]))
+
   // Class definitions
-  lines.push(`classDef open fill:${config.colors.issues.open},color:#fff,stroke:#fff`)
-  lines.push(`classDef closed fill:${config.colors.issues.closed},color:#fff,stroke:#fff`)
+  lines.push(
+    `classDef open fill:${config.colors.issues.open},color:#fff,stroke:#fff`
+  )
+  lines.push(
+    `classDef closed fill:${config.colors.issues.closed},color:#fff,stroke:#fff`
+  )
   lines.push('')
-  
+
   // Track used nodes for dependency validation
-  const issueNumbers = new Set(issues.map(i => i.number))
-  
+  const issueNumbers = new Set(issues.map((i) => i.number))
+
   // Group issues by milestone
   const issuesByMilestone = new Map<string, Issue[]>()
   const orphanIssues: Issue[] = []
-  
+
   for (const issue of issues) {
     if (issue.milestone) {
       if (!issuesByMilestone.has(issue.milestone)) {
@@ -32,31 +36,34 @@ export function generateDiagram(
       orphanIssues.push(issue)
     }
   }
-  
+
   // Generate subgraphs for milestones (sorted by due date)
   milestones.forEach((milestone, idx) => {
-    const color = config.colors.milestones[idx % config.colors.milestones.length]
+    const color =
+      config.colors.milestones[idx % config.colors.milestones.length]
     const dueStr = milestone.dueOn ? ` (${milestone.dueOn.split('T')[0]})` : ''
     const safeTitle = escapeMermaid(milestone.title)
-    
+
     lines.push(`subgraph M${milestone.number} ["${safeTitle}${dueStr}"]`)
-    lines.push(`  style M${milestone.number} fill:${color},stroke:#333,stroke-width:2px`)
-    
+    lines.push(
+      `  style M${milestone.number} fill:${color},stroke:#333,stroke-width:2px`
+    )
+
     const milestoneIssues = issuesByMilestone.get(milestone.title) || []
     for (const issue of milestoneIssues) {
       lines.push(`  ${formatNode(issue, config)}`)
     }
-    
+
     lines.push('end')
     lines.push('')
   })
-  
+
   // Orphan issues (top level)
   for (const issue of orphanIssues) {
     lines.push(formatNode(issue, config))
   }
   if (orphanIssues.length > 0) lines.push('')
-  
+
   // Dependencies (blockedBy relationships)
   // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
   for (const issue of issues) {
@@ -66,15 +73,15 @@ export function generateDiagram(
       }
     }
   }
-  if (issues.some(i => i.blockedBy.length > 0)) lines.push('')
-  
+  if (issues.some((i) => i.blockedBy.length > 0)) lines.push('')
+
   // Chronological arrows between consecutive milestones
   for (let i = 0; i < milestones.length - 1; i++) {
     if (milestones[i].dueOn && milestones[i + 1].dueOn) {
       lines.push(`M${milestones[i].number} -.-> M${milestones[i + 1].number}`)
     }
   }
-  
+
   return lines.join('\n')
 }
 
@@ -82,7 +89,7 @@ function formatNode(issue: Issue, config: StyleConfig): string {
   const safeTitle = escapeMermaid(issue.title)
   const shape = config.shapes.issue
   const className = issue.state === 'open' ? 'open' : 'closed'
-  
+
   // Mermaid shapes syntax: ["text"] for box, ("") for round, ("") for stadium, etc.
   let formatted: string
   switch (shape) {
@@ -97,7 +104,7 @@ function formatNode(issue: Issue, config: StyleConfig): string {
       formatted = `I${issue.number}[\"${safeTitle}\"]`
       break
   }
-  
+
   return `${formatted}:::${className}`
 }
 

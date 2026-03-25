@@ -36,8 +36,8 @@ export async function fetchData(
     direction: 'asc'
   })
 
-  const milestoneNumbers = milestones.map(m => m.number)
-  
+  const milestoneNumbers = milestones.map((m) => m.number)
+
   // Fetch all issues from open milestones + open orphan issues
   const issues: Issue[] = []
   const blockedByMap = new Map<number, number[]>()
@@ -52,7 +52,7 @@ export async function fetchData(
   // Fetch issues with pagination
   let page = 1
   let hasMore = true
-  
+
   while (hasMore) {
     const { data: pageIssues } = await octokit.rest.issues.listForRepo({
       owner,
@@ -76,21 +76,29 @@ export async function fetchData(
         excludeLabel &&
         issue.labels.some(
           (l) => (typeof l === 'string' ? l : l.name) === excludeLabel
-      )) continue
+        )
+      )
+        continue
 
       const milestoneTitle = issue.milestone ? issue.milestone.title : null
 
       // Include if:
       // 1. Belongs to open milestone, OR
       // 2. Open and no milestone (orphan)
-      const inOpenMilestone = issue.milestone && milestoneNumbers.includes(issue.milestone.number)
+      const inOpenMilestone =
+        issue.milestone && milestoneNumbers.includes(issue.milestone.number)
       const isOpenOrphan = issue.state === 'open' && !issue.milestone
 
       if (!inOpenMilestone && !isOpenOrphan) continue
 
       // Fetch blockedBy relationships via GraphQL
-      const blocked = await fetchBlockedBy(graphqlWithAuth, owner, repo, issue.number)
-      
+      const blocked = await fetchBlockedBy(
+        graphqlWithAuth,
+        owner,
+        repo,
+        issue.number
+      )
+
       issues.push({
         number: issue.number,
         title: issue.title,
@@ -107,7 +115,7 @@ export async function fetchData(
   }
 
   return {
-    milestones: milestones.map(m => ({
+    milestones: milestones.map((m) => ({
       number: m.number,
       title: m.title,
       dueOn: m.due_on,
