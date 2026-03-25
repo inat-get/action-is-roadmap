@@ -1,4 +1,3 @@
-// src/mermaid.ts
 import { Issue, Milestone } from './github.js'
 import { StyleConfig } from './config.js'
 
@@ -8,7 +7,6 @@ export function generateDiagram(
   config: StyleConfig
 ): string {
   const lines: string[] = []
-  const milestoneMap = new Map(milestones.map((m) => [m.title, m]))
 
   // Class definitions
   lines.push(
@@ -94,14 +92,14 @@ function formatNode(issue: Issue, config: StyleConfig): string {
   let formatted: string
   switch (shape) {
     case 'round':
-      formatted = `I${issue.number}(\"${safeTitle}\")`
+      formatted = `I${issue.number}("${safeTitle}")`
       break
     case 'stadium':
-      formatted = `I${issue.number}([\"${safeTitle}\"])`
+      formatted = `I${issue.number}(["${safeTitle}"])`
       break
     case 'box':
     default:
-      formatted = `I${issue.number}[\"${safeTitle}\"]`
+      formatted = `I${issue.number}["${safeTitle}"]`
       break
   }
 

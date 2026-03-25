@@ -1,4 +1,3 @@
-// src/output.ts
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as fs from 'fs'
@@ -34,14 +33,14 @@ ${diagram}
     core.info(`Roadmap written to ${outputPath}`)
 
     // Commit using git
-    await commitFile(outputPath, token)
+    await commitFile(outputPath)
   } else {
     // Write to wiki
     await writeToWiki(wikiTitle, content, token, owner, repo)
   }
 }
 
-async function commitFile(filePath: string, token: string): Promise<void> {
+async function commitFile(filePath: string): Promise<void> {
   try {
     await exec('git', ['config', 'user.name', 'github-actions[bot]'])
     await exec('git', [
@@ -54,16 +53,10 @@ async function commitFile(filePath: string, token: string): Promise<void> {
 
     // Check if there are changes
     let hasChanges = false
-    await exec('git', ['diff', '--cached', '--quiet'], {
-      ignoreReturnCode: true,
-      listeners: {
-        stdline: () => {},
-        errline: () => {},
-        debug: () => {}
-      }
-    }).then((code) => {
-      hasChanges = code !== 0
+    const exitCode = await exec('git', ['diff', '--cached', '--quiet'], {
+      ignoreReturnCode: true
     })
+    hasChanges = exitCode !== 0
 
     if (hasChanges) {
       await exec('git', ['commit', '-m', `Update roadmap [automated]`])
@@ -73,7 +66,8 @@ async function commitFile(filePath: string, token: string): Promise<void> {
       core.info('No changes to commit')
     }
   } catch (error) {
-    core.warning(`Failed to commit changes: ${error}`)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    core.warning(`Failed to commit changes: ${errorMessage}`)
   }
 }
 
@@ -115,11 +109,14 @@ async function writeToWiki(
     await exec('git', ['-C', wikiDir, 'add', '.'])
 
     let hasChanges = false
-    await exec('git', ['-C', wikiDir, 'diff', '--cached', '--quiet'], {
-      ignoreReturnCode: true
-    }).then((code) => {
-      hasChanges = code !== 0
-    })
+    const exitCode = await exec(
+      'git',
+      ['-C', wikiDir, 'diff', '--cached', '--quiet'],
+      {
+        ignoreReturnCode: true
+      }
+    )
+    hasChanges = exitCode !== 0
 
     if (hasChanges) {
       await exec('git', [
@@ -135,9 +132,10 @@ async function writeToWiki(
       core.info('No changes to wiki')
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
     if (
-      error.message?.includes('Repository not found') ||
-      error.message?.includes('Could not resolve host')
+      errorMessage.includes('Repository not found') ||
+      errorMessage.includes('Could not resolve host')
     ) {
       throw new Error('Wiki is not enabled for this repository')
     }

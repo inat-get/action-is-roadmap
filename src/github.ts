@@ -1,4 +1,3 @@
-// src/github.ts
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { Octokit } from '@octokit/rest'
@@ -18,6 +17,17 @@ export interface Milestone {
   title: string
   dueOn: string | null
   state: 'open' | 'closed'
+}
+
+// GraphQL response types
+interface GraphQLIssueResponse {
+  repository: {
+    issue: {
+      trackedIssues: {
+        nodes: Array<{ number: number }>
+      }
+    } | null
+  }
 }
 
 export async function fetchData(
@@ -40,7 +50,6 @@ export async function fetchData(
 
   // Fetch all issues from open milestones + open orphan issues
   const issues: Issue[] = []
-  const blockedByMap = new Map<number, number[]>()
 
   // GraphQL для получения связей blockedBy
   const graphqlWithAuth = graphql.defaults({
@@ -135,7 +144,7 @@ async function fetchBlockedBy(
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
         issue(number: $number) {
-          blockedBy: trackedIssues(first: 100) {
+          trackedIssues: trackedIssues(first: 100) {
             nodes {
               number
             }
@@ -146,17 +155,19 @@ async function fetchBlockedBy(
   `
 
   try {
-    const result: any = await graphqlWithAuth(query, {
+    const result = await graphqlWithAuth<GraphQLIssueResponse>(query, {
       owner,
       repo,
       number: issueNumber
     })
+
     return (
-      result.repository.issue?.blockedBy?.nodes?.map((n: any) => n.number) || []
+      result.repository.issue?.trackedIssues?.nodes?.map((n) => n.number) || []
     )
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
     core.warning(
-      `Failed to fetch blockedBy for issue #${issueNumber}: ${error}`
+      `Failed to fetch blockedBy for issue #${issueNumber}: ${errorMessage}`
     )
     return []
   }

@@ -3,56 +3,42 @@
  */
 import { jest } from '@jest/globals'
 import * as core from '../__fixtures__/core.js'
-import * as github from '../__fixtures__/github.js'
 
 // Mocks should be declared before the module being tested is imported.
 jest.unstable_mockModule('@actions/core', () => core)
-jest.unstable_mockModule('@actions/github', () => github)
 
 // Mock the modules
 const { run } = await import('../src/main.js')
-const { fetchData } = await import('../src/github.js')
-const { generateDiagram } = await import('../src/mermaid.js')
-const { writeOutput } = await import('../src/output.js')
-const { loadConfig } = await import('../src/config.js')
 
 // Mock implementations
+const mockedFetchData = jest.fn()
+const mockedGenerateDiagram = jest.fn().mockReturnValue('graph TD\nI1[Issue]')
+const mockedWriteOutput = jest.fn().mockResolvedValue(undefined)
+const mockedLoadConfig = jest.fn().mockReturnValue({
+  colors: {
+    milestones: ['#e1f5fe'],
+    issues: { open: '#2da44e', closed: '#57606a' },
+    arrows: { blocking: '#000000', chronological: '#666666' }
+  },
+  shapes: { issue: 'box' }
+})
+
 jest.unstable_mockModule('../src/github.js', () => ({
-  fetchData: jest.fn<typeof fetchData>()
+  fetchData: mockedFetchData
 }))
 
 jest.unstable_mockModule('../src/mermaid.js', () => ({
-  generateDiagram: jest
-    .fn<typeof generateDiagram>()
-    .mockReturnValue('graph TD\nI1[Issue]')
+  generateDiagram: mockedGenerateDiagram
 }))
 
 jest.unstable_mockModule('../src/output.js', () => ({
-  writeOutput: jest.fn<typeof writeOutput>().mockResolvedValue(undefined)
+  writeOutput: mockedWriteOutput
 }))
 
 jest.unstable_mockModule('../src/config.js', () => ({
-  loadConfig: jest.fn<typeof loadConfig>().mockReturnValue({
-    colors: {
-      milestones: ['#e1f5fe'],
-      issues: { open: '#2da44e', closed: '#57606a' },
-      arrows: { blocking: '#000000', chronological: '#666666' }
-    },
-    shapes: { issue: 'box' }
-  }),
+  loadConfig: mockedLoadConfig,
   DEFAULT_CONFIG: {}
 }))
-
-const mockedFetchData = (await import('../src/github.js')) as jest.Mocked<
-  typeof import('../src/github.js')
->
-const mockedGenerateDiagram =
-  (await import('../src/mermaid.js')) as jest.Mocked<
-    typeof import('../src/mermaid.js')
-  >
-const mockedWriteOutput = (await import('../src/output.js')) as jest.Mocked<
-  typeof import('../src/output.js')
->
 
 describe('main.ts', () => {
   beforeEach(() => {
