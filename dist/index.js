@@ -39827,7 +39827,7 @@ function generateDiagram(milestones, issues, config) {
     const subIssueLinks = [];
     for (const issue of issues) {
         if (issue.parent && issueNumbers.has(issue.parent)) {
-            const link = `I${issue.number} -->|sub-issue| I${issue.parent}`;
+            const link = `I${issue.number} --> I${issue.parent}`;
             subIssueLinks.push(link);
             info(`  Added sub-issue link: I${issue.number} --> I${issue.parent} (parent)`);
         }
