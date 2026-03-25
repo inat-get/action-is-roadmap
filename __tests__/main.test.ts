@@ -51,16 +51,20 @@ describe('main.ts', () => {
       return inputs[name] || ''
     })
 
-    // Reset mocks
-    mockedFetchData.mockReset()
-    mockedGenerateDiagram.mockReset()
-    mockedWriteOutput.mockReset()
+    // Reset mocks - используем mockClear вместо mockReset, чтобы сохранить implementations
+    mockedFetchData.mockClear()
+    mockedGenerateDiagram.mockClear()
+    mockedWriteOutput.mockClear()
     core.setOutput.mockClear()
     core.setFailed.mockClear()
+
+    // Переустанавливаем mockReturnValue после clear (на всякий случай)
+    mockedGenerateDiagram.mockReturnValue('graph TD\nI1[Issue]')
+    mockedWriteOutput.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
-    jest.resetAllMocks()
+    jest.clearAllMocks()
   })
 
   it('Successfully generates roadmap', async () => {
@@ -162,7 +166,7 @@ describe('main.ts', () => {
     await run()
 
     expect(mockedWriteOutput).toHaveBeenCalledWith(
-      expect.any(String),
+      'graph TD\nI1[Issue]',
       'wiki',
       'ROADMAP.md',
       'Project Roadmap',
