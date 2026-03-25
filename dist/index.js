@@ -36868,7 +36868,7 @@ async function fetchBlockedBy(graphqlWithAuth, owner, repo, issueNumber) {
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
         issue(number: $number) {
-          trackedIssues: trackedIssues(first: 100) {
+          trackedInIssues: trackedInIssues(first: 100) {
             nodes {
               number
             }
@@ -36883,7 +36883,8 @@ async function fetchBlockedBy(graphqlWithAuth, owner, repo, issueNumber) {
             repo,
             number: issueNumber
         });
-        return (result.repository.issue?.trackedIssues?.nodes?.map((n) => n.number) || []);
+        return (result.repository.issue?.trackedInIssues?.nodes?.map((n) => n.number) ||
+            []);
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
