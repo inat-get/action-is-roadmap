@@ -15,6 +15,11 @@ export interface StyleConfig {
       subIssues: string
     }
   }
+  weights?: {
+    blocking?: number
+    chronological?: number
+    subIssues?: number
+  }
   shapes: {
     issue: string
   }
@@ -35,6 +40,11 @@ export const DEFAULT_CONFIG: StyleConfig = {
   },
   shapes: {
     issue: 'box'
+  },
+  weights: {
+    blocking: 1,
+    subIssues: 2,
+    chronological: 4
   }
 }
 

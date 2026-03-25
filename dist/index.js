@@ -39721,6 +39721,11 @@ const DEFAULT_CONFIG = {
     },
     shapes: {
         issue: 'box'
+    },
+    weights: {
+        blocking: 1,
+        subIssues: 2,
+        chronological: 4
     }
 };
 function loadConfig(configPath) {
@@ -39760,14 +39765,15 @@ function loadConfig(configPath) {
 
 function generateDiagram(milestones, issues, config) {
     const lines = [];
+    const weights = config.weights || {};
     lines.push('flowchart TB');
     // Class definitions
     lines.push(`classDef open fill:${config.colors.issues.open},color:#fff,stroke:#fff`);
     lines.push(`classDef closed fill:${config.colors.issues.closed},color:#fff,stroke:#fff`);
     lines.push('');
-    // Track used nodes for dependency validation
-    const issueNumbers = new Set(issues.map((i) => i.number));
-    info(`Available issue numbers in diagram: [${Array.from(issueNumbers).join(', ')}]`);
+    // Map для быстрого доступа к issue по номеру (нужно для проверки milestone)
+    const issueMap = new Map(issues.map((i) => [i.number, i]));
+    info(`Available issues: [${Array.from(issueMap.keys()).join(', ')}]`);
     // Group issues by milestone
     const issuesByMilestone = new Map();
     const orphanIssues = [];
@@ -39803,53 +39809,88 @@ function generateDiagram(milestones, issues, config) {
     }
     if (orphanIssues.length > 0)
         lines.push('');
-    // Dependencies (blockedBy relationships)
-    // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
+    // Собираем связи для отрисовки
+    const blockingLinks = [];
+    const subIssueLinks = [];
+    const chronologicalLinks = [];
+    // Dependencies (blockedBy relationships) - только внутри одного milestone
     info(`Generating dependencies for ${issues.length} issues...`);
-    // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
     for (const issue of issues) {
-        info(`Issue #${issue.number} has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`);
+        info(`Issue #${issue.number} (milestone: ${issue.milestone || 'none'}) has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`);
         for (const blockerNum of issue.blockedBy) {
-            if (issueNumbers.has(blockerNum)) {
-                lines.push(`I${blockerNum} --> I${issue.number}`);
-                info(`  Added arrow: I${blockerNum} --> I${issue.number}`);
+            const blocker = issueMap.get(blockerNum);
+            if (!blocker) {
+                info(`  Blocker #${blockerNum} not found in current issues set`);
+                continue;
+            }
+            // Проверяем, что оба issue в одном milestone
+            if (issue.milestone && issue.milestone === blocker.milestone) {
+                blockingLinks.push(`I${blockerNum} --> I${issue.number}`);
+                info(`  Added arrow: I${blockerNum} --> I${issue.number} (same milestone: ${issue.milestone})`);
             }
             else {
-                info(`  Blocker #${blockerNum} not found in current issues set`);
+                info(`  Skipping cross-milestone arrow: #${blockerNum} (${blocker.milestone || 'no ms'}) --> #${issue.number} (${issue.milestone || 'no ms'})`);
             }
         }
     }
-    if (issues.some((i) => i.blockedBy.length > 0))
-        lines.push('');
-    // Sub-issues relationships (parent-child)
-    // Logic: if A has parent B, then A --> B (child points to parent)
+    // Sub-issues relationships (parent-child) - только внутри одного milestone
     info(`Generating sub-issues relationships...`);
-    const subIssueLinks = [];
     for (const issue of issues) {
-        if (issue.parent && issueNumbers.has(issue.parent)) {
-            const link = `I${issue.number} --> I${issue.parent}`;
-            subIssueLinks.push(link);
-            info(`  Added sub-issue link: I${issue.number} --> I${issue.parent} (parent)`);
-        }
-        else if (issue.parent) {
+        if (!issue.parent)
+            continue;
+        const parent = issueMap.get(issue.parent);
+        if (!parent) {
             info(`  Parent #${issue.parent} for issue #${issue.number} not found in current issues set`);
+            continue;
         }
+        // Проверяем, что оба issue в одном milestone
+        if (issue.milestone && issue.milestone === parent.milestone) {
+            subIssueLinks.push(`I${issue.number} -->|sub-issue| I${issue.parent}`);
+            info(`  Added sub-issue link: I${issue.number} --> I${issue.parent} (same milestone: ${issue.milestone})`);
+        }
+        else {
+            info(`  Skipping cross-milestone sub-issue: #${issue.number} (${issue.milestone || 'no ms'}) --> #${issue.parent} (${parent.milestone || 'no ms'})`);
+        }
+    }
+    // Chronological arrows между consecutive milestones (эти оставляем всегда)
+    for (let i = 0; i < milestones.length - 1; i++) {
+        if (milestones[i].dueOn && milestones[i + 1].dueOn) {
+            chronologicalLinks.push(`M${milestones[i].number} ==> M${milestones[i + 1].number}`);
+        }
+    }
+    // Добавляем связи в диаграмму
+    if (blockingLinks.length > 0) {
+        lines.push(...blockingLinks);
+        lines.push('');
     }
     if (subIssueLinks.length > 0) {
         lines.push(...subIssueLinks);
         lines.push('');
-        // Calculate link indices for styling (after blocking arrows)
-        const blockingCount = issues.reduce((sum, i) => sum + i.blockedBy.filter((b) => issueNumbers.has(b)).length, 0);
-        // Style sub-issue links
-        for (let i = 0; i < subIssueLinks.length; i++) {
-            lines.push(`linkStyle ${blockingCount + i} stroke:${config.colors.arrows.subIssues},stroke-width:2px`);
+    }
+    if (chronologicalLinks.length > 0) {
+        lines.push(...chronologicalLinks);
+        lines.push('');
+    }
+    // Применяем стили к связям
+    let linkIndex = 0;
+    if (blockingLinks.length > 0) {
+        for (let i = 0; i < blockingLinks.length; i++) {
+            lines.push(`linkStyle ${linkIndex} stroke:${config.colors.arrows.blocking},stroke-width:${weights.blocking || 1}px`);
+            linkIndex++;
         }
         lines.push('');
     }
-    // Chronological arrows between consecutive milestones
-    for (let i = 0; i < milestones.length - 1; i++) {
-        if (milestones[i].dueOn && milestones[i + 1].dueOn) {
-            lines.push(`M${milestones[i].number} -.-> M${milestones[i + 1].number}`);
+    if (subIssueLinks.length > 0) {
+        for (let i = 0; i < subIssueLinks.length; i++) {
+            lines.push(`linkStyle ${linkIndex} stroke:${config.colors.arrows.subIssues},stroke-width:${weights.subIssues || 2}px`);
+            linkIndex++;
+        }
+        lines.push('');
+    }
+    if (chronologicalLinks.length > 0) {
+        for (let i = 0; i < chronologicalLinks.length; i++) {
+            lines.push(`linkStyle ${linkIndex} stroke:${config.colors.arrows.chronological},stroke-width:${weights.chronological || 3}px`);
+            linkIndex++;
         }
     }
     return lines.join('\n');
@@ -39858,7 +39899,6 @@ function formatNode(issue, config) {
     const safeTitle = escapeMermaid(issue.title);
     const shape = config.shapes.issue;
     const className = issue.state === 'open' ? 'open' : 'closed';
-    // Mermaid shapes syntax: ["text"] for box, ("") for round, ("") for stadium, etc.
     let formatted;
     switch (shape) {
         case 'round':
@@ -39875,7 +39915,6 @@ function formatNode(issue, config) {
     return `${formatted}:::${className}`;
 }
 function escapeMermaid(text) {
-    // Escape quotes and special characters for Mermaid
     return text
         .replace(/"/g, '#quot;')
         .replace(/\[/g, '#91;')
@@ -39889,7 +39928,7 @@ function escapeMermaid(text) {
         .replace(/\|/g, '#124;')
         .replace(/\*/g, '#42;')
         .replace(/\n/g, ' ')
-        .substring(0, 100); // Limit length to prevent diagram breaking
+        .substring(0, 100);
 }
 
 var exec = {};
