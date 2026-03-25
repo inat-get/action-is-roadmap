@@ -1,6 +1,7 @@
-# action.yml
 name: 'Generate Roadmap'
-description: 'Generates Mermaid flowchart roadmap from GitHub Milestones, Issues and Dependencies'
+description:
+  'Generates Mermaid flowchart roadmap from GitHub Milestones, Issues and
+  Dependencies'
 author: 'Ivan Shikhalev'
 
 branding:

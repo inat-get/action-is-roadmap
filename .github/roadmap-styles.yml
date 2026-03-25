@@ -1,12 +1,12 @@
 colors:
   milestones:
-    - "#e1f5fe"
-    - "#fff3e0"
+    - '#e1f5fe'
+    - '#fff3e0'
   issues:
-    open: "#2da44e"
-    closed: "#57606a"
+    open: '#2da44e'
+    closed: '#57606a'
   arrows:
-    blocking: "#000000"
-    chronological: "#666666"
+    blocking: '#000000'
+    chronological: '#666666'
 shapes:
-  issue: "box"
+  issue: 'box'

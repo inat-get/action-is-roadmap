@@ -9,7 +9,7 @@ on:
       - main
 
 permissions:
-  contents: write  # Нужно для коммита roadmap
+  contents: write # Нужно для коммита roadmap
   issues: read
   pull-requests: read
 
