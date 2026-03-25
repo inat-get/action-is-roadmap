@@ -39751,6 +39751,7 @@ function loadConfig(configPath) {
 
 function generateDiagram(milestones, issues, config) {
     const lines = [];
+    lines.push('flowchart TB');
     // Class definitions
     lines.push(`classDef open fill:${config.colors.issues.open},color:#fff,stroke:#fff`);
     lines.push(`classDef closed fill:${config.colors.issues.closed},color:#fff,stroke:#fff`);
@@ -39778,6 +39779,7 @@ function generateDiagram(milestones, issues, config) {
         const safeTitle = escapeMermaid(milestone.title);
         lines.push(`subgraph M${milestone.number} ["${safeTitle}${dueStr}"]`);
         lines.push(`  style M${milestone.number} fill:${color},stroke:#333,stroke-width:2px`);
+        lines.push('direction TB');
         const milestoneIssues = issuesByMilestone.get(milestone.title) || [];
         for (const issue of milestoneIssues) {
             lines.push(`  ${formatNode(issue, config)}`);
