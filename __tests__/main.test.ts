@@ -4,13 +4,7 @@
 import { jest } from '@jest/globals'
 import * as core from '../__fixtures__/core.js'
 
-// Mocks should be declared before the module being tested is imported.
-jest.unstable_mockModule('@actions/core', () => core)
-
-// Mock the modules
-const { run } = await import('../src/main.js')
-
-// Mock implementations
+// Mock implementations - объявляем ДО всех unstable_mockModule
 const mockedFetchData = jest.fn()
 const mockedGenerateDiagram = jest.fn().mockReturnValue('graph TD\nI1[Issue]')
 const mockedWriteOutput = jest.fn().mockResolvedValue(undefined)
@@ -23,22 +17,24 @@ const mockedLoadConfig = jest.fn().mockReturnValue({
   shapes: { issue: 'box' }
 })
 
+// Все моки должны быть объявлены ДО импорта тестируемого модуля
+jest.unstable_mockModule('@actions/core', () => core)
 jest.unstable_mockModule('../src/github.js', () => ({
   fetchData: mockedFetchData
 }))
-
 jest.unstable_mockModule('../src/mermaid.js', () => ({
   generateDiagram: mockedGenerateDiagram
 }))
-
 jest.unstable_mockModule('../src/output.js', () => ({
   writeOutput: mockedWriteOutput
 }))
-
 jest.unstable_mockModule('../src/config.js', () => ({
   loadConfig: mockedLoadConfig,
   DEFAULT_CONFIG: {}
 }))
+
+// Теперь импортируем тестируемый модуль
+const { run } = await import('../src/main.js')
 
 describe('main.ts', () => {
   beforeEach(() => {
@@ -56,9 +52,9 @@ describe('main.ts', () => {
     })
 
     // Reset mocks
-    mockedFetchData.fetchData.mockReset()
-    mockedGenerateDiagram.generateDiagram.mockReset()
-    mockedWriteOutput.writeOutput.mockReset()
+    mockedFetchData.mockReset()
+    mockedGenerateDiagram.mockReset()
+    mockedWriteOutput.mockReset()
     core.setOutput.mockClear()
     core.setFailed.mockClear()
   })
@@ -87,7 +83,7 @@ describe('main.ts', () => {
       }
     ]
 
-    mockedFetchData.fetchData.mockResolvedValue({
+    mockedFetchData.mockResolvedValue({
       milestones: mockMilestones,
       issues: mockIssues
     })
@@ -95,17 +91,17 @@ describe('main.ts', () => {
     await run()
 
     // Verify fetchData was called
-    expect(mockedFetchData.fetchData).toHaveBeenCalledWith('fake-token', null)
+    expect(mockedFetchData).toHaveBeenCalledWith('fake-token', null)
 
     // Verify generateDiagram was called
-    expect(mockedGenerateDiagram.generateDiagram).toHaveBeenCalledWith(
+    expect(mockedGenerateDiagram).toHaveBeenCalledWith(
       mockMilestones,
       mockIssues,
       expect.any(Object)
     )
 
     // Verify output was written
-    expect(mockedWriteOutput.writeOutput).toHaveBeenCalledWith(
+    expect(mockedWriteOutput).toHaveBeenCalledWith(
       'graph TD\nI1[Issue]',
       'file',
       'ROADMAP.md',
@@ -133,18 +129,15 @@ describe('main.ts', () => {
       return inputs[name] || ''
     })
 
-    mockedFetchData.fetchData.mockResolvedValue({ milestones: [], issues: [] })
+    mockedFetchData.mockResolvedValue({ milestones: [], issues: [] })
 
     await run()
 
-    expect(mockedFetchData.fetchData).toHaveBeenCalledWith(
-      'fake-token',
-      'skip-roadmap'
-    )
+    expect(mockedFetchData).toHaveBeenCalledWith('fake-token', 'skip-roadmap')
   })
 
   it('Sets failed status on error', async () => {
-    mockedFetchData.fetchData.mockRejectedValue(new Error('API Error'))
+    mockedFetchData.mockRejectedValue(new Error('API Error'))
 
     await run()
 
@@ -164,11 +157,11 @@ describe('main.ts', () => {
       return inputs[name] || ''
     })
 
-    mockedFetchData.fetchData.mockResolvedValue({ milestones: [], issues: [] })
+    mockedFetchData.mockResolvedValue({ milestones: [], issues: [] })
 
     await run()
 
-    expect(mockedWriteOutput.writeOutput).toHaveBeenCalledWith(
+    expect(mockedWriteOutput).toHaveBeenCalledWith(
       expect.any(String),
       'wiki',
       'ROADMAP.md',
