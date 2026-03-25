@@ -9,7 +9,9 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write  # Нужно для коммита roadmap
+  issues: read
+  pull-requests: read
 
 jobs:
   test-typescript:
@@ -19,11 +21,11 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         id: setup-node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
@@ -47,18 +49,46 @@ jobs:
   test-action:
     name: GitHub Actions Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
 
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci && npm run package
 
       - name: Test Local Action
         id: test-action
         uses: ./
         with:
-          milliseconds: 2000
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          output_type: file
+          output_path: 'TEST_ROADMAP.md'
+          config_file: '.github/roadmap-styles.yml'
 
-      - name: Print Output
+      - name: Print Generated Diagram
         id: output
-        run: echo "${{ steps.test-action.outputs.time }}"
+        run: |
+          echo "Generated diagram:"
+          echo "${{ steps.test-action.outputs.diagram }}"
+
+      - name: Check Output File Exists
+        run: |
+          if [ -f "TEST_ROADMAP.md" ]; then
+            echo "Roadmap file created successfully"
+            cat TEST_ROADMAP.md
+          else
+            echo "Roadmap file not found"
+            exit 1
+          fi
