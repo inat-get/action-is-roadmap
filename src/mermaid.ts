@@ -5,10 +5,13 @@ import * as core from '@actions/core'
 export function generateDiagram(
   milestones: Milestone[],
   issues: Issue[],
-  config: StyleConfig
+  config: StyleConfig,
+  owner: string, // Добавлено
+  repo: string // Добавлено
 ): string {
   const lines: string[] = []
   const weights = config.weights || {}
+  const clickCommands: string[] = [] // Хранилище для click-команд
 
   lines.push('flowchart TB')
 
@@ -21,7 +24,7 @@ export function generateDiagram(
   )
   lines.push('')
 
-  // Map для быстрого доступа к issue по номеру (нужно для проверки milestone)
+  // Map для быстрого доступа к issue по номеру
   const issueMap = new Map(issues.map((i) => [i.number, i]))
 
   core.info(`Available issues: [${Array.from(issueMap.keys()).join(', ')}]`)
@@ -41,7 +44,7 @@ export function generateDiagram(
     }
   }
 
-  // Generate subgraphs for milestones (sorted by due date)
+  // Generate subgraphs for milestones
   milestones.forEach((milestone, idx) => {
     const color =
       config.colors.milestones[idx % config.colors.milestones.length]
@@ -54,9 +57,18 @@ export function generateDiagram(
     )
     lines.push('direction TB')
 
+    // Добавляем ссылку на milestone (работает в большинстве рендеров Mermaid)
+    clickCommands.push(
+      `click M${milestone.number} href "https://github.com/${owner}/${repo}/milestone/${milestone.number}"`
+    )
+
     const milestoneIssues = issuesByMilestone.get(milestone.title) || []
     for (const issue of milestoneIssues) {
       lines.push(`  ${formatNode(issue, config)}`)
+      // Добавляем ссылку на issue
+      clickCommands.push(
+        `click I${issue.number} href "https://github.com/${owner}/${repo}/issues/${issue.number}"`
+      )
     }
 
     lines.push('end')
@@ -66,17 +78,16 @@ export function generateDiagram(
   // Orphan issues (top level)
   for (const issue of orphanIssues) {
     lines.push(formatNode(issue, config))
+    clickCommands.push(
+      `click I${issue.number} href "https://github.com/${owner}/${repo}/issues/${issue.number}"`
+    )
   }
   if (orphanIssues.length > 0) lines.push('')
 
-  // Собираем связи для отрисовки
-  const blockingLinks: string[] = []
-  const subIssueLinks: string[] = []
-  const chronologicalLinks: string[] = []
-
-  // Dependencies (blockedBy relationships) - только внутри одного milestone
+  // Dependencies (blockedBy relationships)
   core.info(`Generating dependencies for ${issues.length} issues...`)
 
+  const blockingLinks: string[] = []
   for (const issue of issues) {
     core.info(
       `Issue #${issue.number} (milestone: ${issue.milestone || 'none'}) has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`
@@ -90,8 +101,7 @@ export function generateDiagram(
         continue
       }
 
-      // Проверяем, что оба issue в одном milestone
-      if (issue.milestone && issue.milestone === blocker.milestone) {
+      if (issue.milestone === blocker.milestone) {
         blockingLinks.push(`I${blockerNum} --> I${issue.number}`)
         core.info(
           `  Added arrow: I${blockerNum} --> I${issue.number} (same milestone: ${issue.milestone})`
@@ -104,7 +114,8 @@ export function generateDiagram(
     }
   }
 
-  // Sub-issues relationships (parent-child) - только внутри одного milestone
+  // Sub-issues relationships
+  const subIssueLinks: string[] = []
   core.info(`Generating sub-issues relationships...`)
 
   for (const issue of issues) {
@@ -119,8 +130,7 @@ export function generateDiagram(
       continue
     }
 
-    // Проверяем, что оба issue в одном milestone
-    if (issue.milestone && issue.milestone === parent.milestone) {
+    if (issue.milestone === parent.milestone) {
       subIssueLinks.push(`I${issue.number} --> I${issue.parent}`)
       core.info(
         `  Added sub-issue link: I${issue.number} --> I${issue.parent} (same milestone: ${issue.milestone})`
@@ -132,7 +142,8 @@ export function generateDiagram(
     }
   }
 
-  // Chronological arrows между consecutive milestones (эти оставляем всегда)
+  // Chronological arrows между consecutive milestones
+  const chronologicalLinks: string[] = []
   for (let i = 0; i < milestones.length - 1; i++) {
     if (milestones[i].dueOn && milestones[i + 1].dueOn) {
       chronologicalLinks.push(
@@ -157,7 +168,7 @@ export function generateDiagram(
     lines.push('')
   }
 
-  // Применяем стили к связям
+  // Стили для связей
   let linkIndex = 0
 
   if (blockingLinks.length > 0) {
@@ -187,6 +198,13 @@ export function generateDiagram(
       )
       linkIndex++
     }
+  }
+
+  // Добавляем кликабельные ссылки в конец диаграммы
+  if (clickCommands.length > 0) {
+    lines.push('')
+    lines.push('%% Clickable links')
+    lines.push(...clickCommands)
   }
 
   return lines.join('\n')

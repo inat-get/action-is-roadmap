@@ -39763,15 +39763,18 @@ function loadConfig(configPath) {
     }
 }
 
-function generateDiagram(milestones, issues, config) {
+function generateDiagram(milestones, issues, config, owner, // Добавлено
+repo // Добавлено
+) {
     const lines = [];
     const weights = config.weights || {};
+    const clickCommands = []; // Хранилище для click-команд
     lines.push('flowchart TB');
     // Class definitions
     lines.push(`classDef open fill:${config.colors.issues.open},color:#fff,stroke:#fff`);
     lines.push(`classDef closed fill:${config.colors.issues.closed},color:#fff,stroke:#fff`);
     lines.push('');
-    // Map для быстрого доступа к issue по номеру (нужно для проверки milestone)
+    // Map для быстрого доступа к issue по номеру
     const issueMap = new Map(issues.map((i) => [i.number, i]));
     info(`Available issues: [${Array.from(issueMap.keys()).join(', ')}]`);
     // Group issues by milestone
@@ -39788,7 +39791,7 @@ function generateDiagram(milestones, issues, config) {
             orphanIssues.push(issue);
         }
     }
-    // Generate subgraphs for milestones (sorted by due date)
+    // Generate subgraphs for milestones
     milestones.forEach((milestone, idx) => {
         const color = config.colors.milestones[idx % config.colors.milestones.length];
         const dueStr = milestone.dueOn ? ` (${milestone.dueOn.split('T')[0]})` : '';
@@ -39796,9 +39799,13 @@ function generateDiagram(milestones, issues, config) {
         lines.push(`subgraph M${milestone.number} ["${safeTitle}${dueStr}"]`);
         lines.push(`  style M${milestone.number} fill:${color},stroke:#333,stroke-width:2px`);
         lines.push('direction TB');
+        // Добавляем ссылку на milestone (работает в большинстве рендеров Mermaid)
+        clickCommands.push(`click M${milestone.number} href "https://github.com/${owner}/${repo}/milestone/${milestone.number}"`);
         const milestoneIssues = issuesByMilestone.get(milestone.title) || [];
         for (const issue of milestoneIssues) {
             lines.push(`  ${formatNode(issue, config)}`);
+            // Добавляем ссылку на issue
+            clickCommands.push(`click I${issue.number} href "https://github.com/${owner}/${repo}/issues/${issue.number}"`);
         }
         lines.push('end');
         lines.push('');
@@ -39806,15 +39813,13 @@ function generateDiagram(milestones, issues, config) {
     // Orphan issues (top level)
     for (const issue of orphanIssues) {
         lines.push(formatNode(issue, config));
+        clickCommands.push(`click I${issue.number} href "https://github.com/${owner}/${repo}/issues/${issue.number}"`);
     }
     if (orphanIssues.length > 0)
         lines.push('');
-    // Собираем связи для отрисовки
-    const blockingLinks = [];
-    const subIssueLinks = [];
-    const chronologicalLinks = [];
-    // Dependencies (blockedBy relationships) - только внутри одного milestone
+    // Dependencies (blockedBy relationships)
     info(`Generating dependencies for ${issues.length} issues...`);
+    const blockingLinks = [];
     for (const issue of issues) {
         info(`Issue #${issue.number} (milestone: ${issue.milestone || 'none'}) has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`);
         for (const blockerNum of issue.blockedBy) {
@@ -39823,8 +39828,7 @@ function generateDiagram(milestones, issues, config) {
                 info(`  Blocker #${blockerNum} not found in current issues set`);
                 continue;
             }
-            // Проверяем, что оба issue в одном milestone
-            if (issue.milestone && issue.milestone === blocker.milestone) {
+            if (issue.milestone === blocker.milestone) {
                 blockingLinks.push(`I${blockerNum} --> I${issue.number}`);
                 info(`  Added arrow: I${blockerNum} --> I${issue.number} (same milestone: ${issue.milestone})`);
             }
@@ -39833,7 +39837,8 @@ function generateDiagram(milestones, issues, config) {
             }
         }
     }
-    // Sub-issues relationships (parent-child) - только внутри одного milestone
+    // Sub-issues relationships
+    const subIssueLinks = [];
     info(`Generating sub-issues relationships...`);
     for (const issue of issues) {
         if (!issue.parent)
@@ -39843,8 +39848,7 @@ function generateDiagram(milestones, issues, config) {
             info(`  Parent #${issue.parent} for issue #${issue.number} not found in current issues set`);
             continue;
         }
-        // Проверяем, что оба issue в одном milestone
-        if (issue.milestone && issue.milestone === parent.milestone) {
+        if (issue.milestone === parent.milestone) {
             subIssueLinks.push(`I${issue.number} --> I${issue.parent}`);
             info(`  Added sub-issue link: I${issue.number} --> I${issue.parent} (same milestone: ${issue.milestone})`);
         }
@@ -39852,7 +39856,8 @@ function generateDiagram(milestones, issues, config) {
             info(`  Skipping cross-milestone sub-issue: #${issue.number} (${issue.milestone || 'no ms'}) --> #${issue.parent} (${parent.milestone || 'no ms'})`);
         }
     }
-    // Chronological arrows между consecutive milestones (эти оставляем всегда)
+    // Chronological arrows между consecutive milestones
+    const chronologicalLinks = [];
     for (let i = 0; i < milestones.length - 1; i++) {
         if (milestones[i].dueOn && milestones[i + 1].dueOn) {
             chronologicalLinks.push(`M${milestones[i].number} ==> M${milestones[i + 1].number}`);
@@ -39871,7 +39876,7 @@ function generateDiagram(milestones, issues, config) {
         lines.push(...chronologicalLinks);
         lines.push('');
     }
-    // Применяем стили к связям
+    // Стили для связей
     let linkIndex = 0;
     if (blockingLinks.length > 0) {
         for (let i = 0; i < blockingLinks.length; i++) {
@@ -39892,6 +39897,12 @@ function generateDiagram(milestones, issues, config) {
             lines.push(`linkStyle ${linkIndex} stroke:${config.colors.arrows.chronological},stroke-width:${weights.chronological || 3}px`);
             linkIndex++;
         }
+    }
+    // Добавляем кликабельные ссылки в конец диаграммы
+    if (clickCommands.length > 0) {
+        lines.push('');
+        lines.push('%% Clickable links');
+        lines.push(...clickCommands);
     }
     return lines.join('\n');
 }
@@ -41304,6 +41315,8 @@ async function run() {
         const wikiTitle = getInput('wiki_title');
         const configFile = getInput('config_file');
         const excludeLabel = getInput('exclude_label') || null;
+        // Получаем owner и repo из контекста
+        const { owner, repo } = context.repo;
         info('Fetching data from GitHub...');
         const { milestones, issues } = await fetchData(token, excludeLabel);
         info(`Found ${milestones.length} milestones, ${issues.length} issues`);
@@ -41313,7 +41326,8 @@ async function run() {
         info('Loading configuration...');
         const config = loadConfig(configFile);
         info('Generating diagram...');
-        const diagram = generateDiagram(milestones, issues, config);
+        // Передаём owner и repo в генератор
+        const diagram = generateDiagram(milestones, issues, config, owner, repo);
         info('Writing output...');
         await writeOutput(diagram, outputType, outputPath, wikiTitle, token);
         setOutput('diagram', diagram);
