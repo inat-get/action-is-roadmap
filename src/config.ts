@@ -39,7 +39,7 @@ export const DEFAULT_CONFIG: StyleConfig = {
     }
   },
   shapes: {
-    issue: 'box'
+    issue: 'round'
   },
   weights: {
     blocking: 1,

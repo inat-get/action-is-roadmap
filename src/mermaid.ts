@@ -121,7 +121,7 @@ export function generateDiagram(
 
     // Проверяем, что оба issue в одном milestone
     if (issue.milestone && issue.milestone === parent.milestone) {
-      subIssueLinks.push(`I${issue.number} -->|sub-issue| I${issue.parent}`)
+      subIssueLinks.push(`I${issue.number} --> I${issue.parent}`)
       core.info(
         `  Added sub-issue link: I${issue.number} --> I${issue.parent} (same milestone: ${issue.milestone})`
       )
