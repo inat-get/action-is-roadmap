@@ -41187,11 +41187,7 @@ var execExports = requireExec();
 
 async function writeOutput(diagram, outputType, outputPath, wikiTitle, token) {
     const { owner, repo } = context.repo;
-    const now = new Date().toISOString();
-    const content = `# Project Roadmap
-
-Generated: ${now}
-
+    const content = `
 \`\`\`mermaid
 ${diagram}
 \`\`\`

@@ -12,12 +12,8 @@ export async function writeOutput(
   token: string
 ): Promise<void> {
   const { owner, repo } = github.context.repo
-  const now = new Date().toISOString()
 
-  const content = `# Project Roadmap
-
-Generated: ${now}
-
+  const content = `
 \`\`\`mermaid
 ${diagram}
 \`\`\`
