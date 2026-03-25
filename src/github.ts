@@ -60,7 +60,7 @@ export async function fetchData(
 
   // Fetch issues with pagination
   let page = 1
-  let hasMore = true
+  const hasMore = true
 
   while (hasMore) {
     const { data: pageIssues } = await octokit.rest.issues.listForRepo({
@@ -72,7 +72,7 @@ export async function fetchData(
     })
 
     if (pageIssues.length === 0) {
-      hasMore = false
+      //   hasMore = false
       break
     }
 

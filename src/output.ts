@@ -137,7 +137,9 @@ async function writeToWiki(
       errorMessage.includes('Repository not found') ||
       errorMessage.includes('Could not resolve host')
     ) {
-      throw new Error('Wiki is not enabled for this repository')
+      throw new Error('Wiki is not enabled for this repository', {
+        cause: error
+      })
     }
     throw error
   } finally {
