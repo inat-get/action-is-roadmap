@@ -8,6 +8,8 @@ export function generateDiagram(
 ): string {
   const lines: string[] = []
 
+  lines.push('flowchart TB')
+
   // Class definitions
   lines.push(
     `classDef open fill:${config.colors.issues.open},color:#fff,stroke:#fff`
@@ -46,6 +48,7 @@ export function generateDiagram(
     lines.push(
       `  style M${milestone.number} fill:${color},stroke:#333,stroke-width:2px`
     )
+    lines.push('direction TB')
 
     const milestoneIssues = issuesByMilestone.get(milestone.title) || []
     for (const issue of milestoneIssues) {
