@@ -142,7 +142,9 @@ The action uses GitHub's "tracked issues" (sub-tasks) to determine blocking
 relationships. To set up dependencies:
 
 1. Open an issue
+
 2. Use the "Track in" feature to mark it as blocked by other issues
+
 3. Or use the GitHub API/CLI to create `trackedIn` relationships
 
 ## Example Output
