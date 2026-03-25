@@ -23,7 +23,7 @@ export interface Milestone {
 interface GraphQLIssueResponse {
   repository: {
     issue: {
-      trackedInIssues: {
+      blockedBy: {
         nodes: Array<{ number: number }>
       }
     } | null
@@ -142,7 +142,7 @@ async function fetchBlockedBy(
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
         issue(number: $number) {
-          trackedInIssues: trackedInIssues(first: 100) {
+          blockedBy: blockedBy(first: 100) {
             nodes {
               number
             }
@@ -159,12 +159,7 @@ async function fetchBlockedBy(
       number: issueNumber
     })
 
-    const blockedBy =
-      result.repository.issue?.trackedInIssues?.nodes?.map((n) => n.number) ||
-      []
-    core.info(`Issue #${issueNumber} blocked by: [${blockedBy.join(', ')}]`)
-
-    return blockedBy
+    return result.repository.issue?.blockedBy?.nodes?.map((n) => n.number) || []
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     core.warning(
