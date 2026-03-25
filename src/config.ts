@@ -12,6 +12,7 @@ export interface StyleConfig {
     arrows: {
       blocking: string
       chronological: string
+      subIssues: string
     }
   }
   shapes: {
@@ -28,7 +29,8 @@ export const DEFAULT_CONFIG: StyleConfig = {
     },
     arrows: {
       blocking: '#000000',
-      chronological: '#666666'
+      chronological: '#666666',
+      subIssues: '#0366d6'
     }
   },
   shapes: {
@@ -59,7 +61,10 @@ export function loadConfig(configPath: string): StyleConfig {
             DEFAULT_CONFIG.colors.arrows.blocking,
           chronological:
             parsed.colors?.arrows?.chronological ||
-            DEFAULT_CONFIG.colors.arrows.chronological
+            DEFAULT_CONFIG.colors.arrows.chronological,
+          subIssues:
+            parsed.colors?.arrows?.subIssues ||
+            DEFAULT_CONFIG.colors.arrows.subIssues
         }
       },
       shapes: {

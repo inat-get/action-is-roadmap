@@ -12,7 +12,11 @@ const mockedLoadConfig = jest.fn().mockReturnValue({
   colors: {
     milestones: ['#e1f5fe'],
     issues: { open: '#2da44e', closed: '#57606a' },
-    arrows: { blocking: '#000000', chronological: '#666666' }
+    arrows: {
+      blocking: '#000000',
+      chronological: '#666666',
+      subIssues: '#0366d6'
+    }
   },
   shapes: { issue: 'box' }
 })
@@ -83,7 +87,8 @@ describe('main.ts', () => {
         state: 'open' as const,
         milestone: 'v1.0',
         labels: [],
-        blockedBy: []
+        blockedBy: [],
+        parent: null
       }
     ]
 

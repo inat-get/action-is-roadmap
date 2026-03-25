@@ -36805,7 +36805,7 @@ async function fetchData(token, excludeLabel) {
     const milestoneNumbers = milestones.map((m) => m.number);
     // Fetch all issues from open milestones + open orphan issues
     const issues = [];
-    // GraphQL для получения связей blockedBy
+    // GraphQL для получения связей blockedBy и parent
     const graphqlWithAuth = graphql2.defaults({
         headers: {
             authorization: `token ${token}`
@@ -36840,15 +36840,16 @@ async function fetchData(token, excludeLabel) {
             const isOpenOrphan = issue.state === 'open' && !issue.milestone;
             if (!inOpenMilestone && !isOpenOrphan)
                 continue;
-            // Fetch blockedBy relationships via GraphQL
-            const blocked = await fetchBlockedBy(graphqlWithAuth, owner, repo, issue.number);
+            // Fetch blockedBy relationships and parent via GraphQL
+            const { blocked, parent } = await fetchIssueRelations(graphqlWithAuth, owner, repo, issue.number);
             issues.push({
                 number: issue.number,
                 title: issue.title,
                 state: issue.state,
                 milestone: milestoneTitle,
                 labels: issue.labels.map((l) => typeof l === 'string' ? l : l.name || ''),
-                blockedBy: blocked
+                blockedBy: blocked,
+                parent: parent
             });
         }
         page++;
@@ -36863,7 +36864,7 @@ async function fetchData(token, excludeLabel) {
         issues
     };
 }
-async function fetchBlockedBy(graphqlWithAuth, owner, repo, issueNumber) {
+async function fetchIssueRelations(graphqlWithAuth, owner, repo, issueNumber) {
     const query = `
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
@@ -36872,6 +36873,9 @@ async function fetchBlockedBy(graphqlWithAuth, owner, repo, issueNumber) {
             nodes {
               number
             }
+          }
+          parent {
+            number
           }
         }
       }
@@ -36883,12 +36887,14 @@ async function fetchBlockedBy(graphqlWithAuth, owner, repo, issueNumber) {
             repo,
             number: issueNumber
         });
-        return result.repository.issue?.blockedBy?.nodes?.map((n) => n.number) || [];
+        const blocked = result.repository.issue?.blockedBy?.nodes?.map((n) => n.number) || [];
+        const parent = result.repository.issue?.parent?.number || null;
+        return { blocked, parent };
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        warning(`Failed to fetch blockedBy for issue #${issueNumber}: ${errorMessage}`);
-        return [];
+        warning(`Failed to fetch relations for issue #${issueNumber}: ${errorMessage}`);
+        return { blocked: [], parent: null };
     }
 }
 
@@ -39709,7 +39715,8 @@ const DEFAULT_CONFIG = {
         },
         arrows: {
             blocking: '#000000',
-            chronological: '#666666'
+            chronological: '#666666',
+            subIssues: '#0366d6'
         }
     },
     shapes: {
@@ -39734,7 +39741,9 @@ function loadConfig(configPath) {
                     blocking: parsed.colors?.arrows?.blocking ||
                         DEFAULT_CONFIG.colors.arrows.blocking,
                     chronological: parsed.colors?.arrows?.chronological ||
-                        DEFAULT_CONFIG.colors.arrows.chronological
+                        DEFAULT_CONFIG.colors.arrows.chronological,
+                    subIssues: parsed.colors?.arrows?.subIssues ||
+                        DEFAULT_CONFIG.colors.arrows.subIssues
                 }
             },
             shapes: {
@@ -39796,22 +39805,47 @@ function generateDiagram(milestones, issues, config) {
         lines.push('');
     // Dependencies (blockedBy relationships)
     // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
-    info(`Generating dependencies for ${issues.length} issues...`); // <-- СЮДА
+    info(`Generating dependencies for ${issues.length} issues...`);
     // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
     for (const issue of issues) {
-        info(`Issue #${issue.number} has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`); // <-- СЮДА
+        info(`Issue #${issue.number} has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`);
         for (const blockerNum of issue.blockedBy) {
             if (issueNumbers.has(blockerNum)) {
                 lines.push(`I${blockerNum} --> I${issue.number}`);
-                info(`  Added arrow: I${blockerNum} --> I${issue.number}`); // <-- СЮДА
+                info(`  Added arrow: I${blockerNum} --> I${issue.number}`);
             }
             else {
-                info(`  Blocker #${blockerNum} not found in current issues set`); // <-- СЮДА
+                info(`  Blocker #${blockerNum} not found in current issues set`);
             }
         }
     }
     if (issues.some((i) => i.blockedBy.length > 0))
         lines.push('');
+    // Sub-issues relationships (parent-child)
+    // Logic: if A has parent B, then A --> B (child points to parent)
+    info(`Generating sub-issues relationships...`);
+    const subIssueLinks = [];
+    for (const issue of issues) {
+        if (issue.parent && issueNumbers.has(issue.parent)) {
+            const link = `I${issue.number} -->|sub-issue| I${issue.parent}`;
+            subIssueLinks.push(link);
+            info(`  Added sub-issue link: I${issue.number} --> I${issue.parent} (parent)`);
+        }
+        else if (issue.parent) {
+            info(`  Parent #${issue.parent} for issue #${issue.number} not found in current issues set`);
+        }
+    }
+    if (subIssueLinks.length > 0) {
+        lines.push(...subIssueLinks);
+        lines.push('');
+        // Calculate link indices for styling (after blocking arrows)
+        const blockingCount = issues.reduce((sum, i) => sum + i.blockedBy.filter((b) => issueNumbers.has(b)).length, 0);
+        // Style sub-issue links
+        for (let i = 0; i < subIssueLinks.length; i++) {
+            lines.push(`linkStyle ${blockingCount + i} stroke:${config.colors.arrows.subIssues},stroke-width:2px`);
+        }
+        lines.push('');
+    }
     // Chronological arrows between consecutive milestones
     for (let i = 0; i < milestones.length - 1; i++) {
         if (milestones[i].dueOn && milestones[i + 1].dueOn) {

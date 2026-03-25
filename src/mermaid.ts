@@ -71,24 +71,64 @@ export function generateDiagram(
 
   // Dependencies (blockedBy relationships)
   // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
-  core.info(`Generating dependencies for ${issues.length} issues...`) // <-- СЮДА
+  core.info(`Generating dependencies for ${issues.length} issues...`)
 
   // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
   for (const issue of issues) {
     core.info(
       `Issue #${issue.number} has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`
-    ) // <-- СЮДА
+    )
 
     for (const blockerNum of issue.blockedBy) {
       if (issueNumbers.has(blockerNum)) {
         lines.push(`I${blockerNum} --> I${issue.number}`)
-        core.info(`  Added arrow: I${blockerNum} --> I${issue.number}`) // <-- СЮДА
+        core.info(`  Added arrow: I${blockerNum} --> I${issue.number}`)
       } else {
-        core.info(`  Blocker #${blockerNum} not found in current issues set`) // <-- СЮДА
+        core.info(`  Blocker #${blockerNum} not found in current issues set`)
       }
     }
   }
   if (issues.some((i) => i.blockedBy.length > 0)) lines.push('')
+
+  // Sub-issues relationships (parent-child)
+  // Logic: if A has parent B, then A --> B (child points to parent)
+  core.info(`Generating sub-issues relationships...`)
+  const subIssueLinks: string[] = []
+
+  for (const issue of issues) {
+    if (issue.parent && issueNumbers.has(issue.parent)) {
+      const link = `I${issue.number} -->|sub-issue| I${issue.parent}`
+      subIssueLinks.push(link)
+      core.info(
+        `  Added sub-issue link: I${issue.number} --> I${issue.parent} (parent)`
+      )
+    } else if (issue.parent) {
+      core.info(
+        `  Parent #${issue.parent} for issue #${issue.number} not found in current issues set`
+      )
+    }
+  }
+
+  if (subIssueLinks.length > 0) {
+    lines.push(...subIssueLinks)
+    lines.push('')
+
+    // Calculate link indices for styling (after blocking arrows)
+    const blockingCount = issues.reduce(
+      (sum, i) => sum + i.blockedBy.filter((b) => issueNumbers.has(b)).length,
+      0
+    )
+
+    // Style sub-issue links
+    for (let i = 0; i < subIssueLinks.length; i++) {
+      lines.push(
+        `linkStyle ${
+          blockingCount + i
+        } stroke:${config.colors.arrows.subIssues},stroke-width:2px`
+      )
+    }
+    lines.push('')
+  }
 
   // Chronological arrows between consecutive milestones
   for (let i = 0; i < milestones.length - 1; i++) {

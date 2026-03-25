@@ -88,6 +88,7 @@ colors:
   arrows:
     blocking: '#000000'
     chronological: '#666666'
+    subIssues: '#0366d6'
 shapes:
   issue: box # box, round, or stadium
 ```

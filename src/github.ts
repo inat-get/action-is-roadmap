@@ -10,6 +10,7 @@ export interface Issue {
   milestone: string | null
   labels: string[]
   blockedBy: number[]
+  parent: number | null
 }
 
 export interface Milestone {
@@ -26,6 +27,9 @@ interface GraphQLIssueResponse {
       blockedBy: {
         nodes: Array<{ number: number }>
       }
+      parent?: {
+        number: number
+      } | null
     } | null
   }
 }
@@ -51,7 +55,7 @@ export async function fetchData(
   // Fetch all issues from open milestones + open orphan issues
   const issues: Issue[] = []
 
-  // GraphQL для получения связей blockedBy
+  // GraphQL для получения связей blockedBy и parent
   const graphqlWithAuth = graphql.defaults({
     headers: {
       authorization: `token ${token}`
@@ -98,8 +102,8 @@ export async function fetchData(
 
       if (!inOpenMilestone && !isOpenOrphan) continue
 
-      // Fetch blockedBy relationships via GraphQL
-      const blocked = await fetchBlockedBy(
+      // Fetch blockedBy relationships and parent via GraphQL
+      const { blocked, parent } = await fetchIssueRelations(
         graphqlWithAuth,
         owner,
         repo,
@@ -114,7 +118,8 @@ export async function fetchData(
         labels: issue.labels.map((l) =>
           typeof l === 'string' ? l : l.name || ''
         ),
-        blockedBy: blocked
+        blockedBy: blocked,
+        parent: parent
       })
     }
 
@@ -132,12 +137,12 @@ export async function fetchData(
   }
 }
 
-async function fetchBlockedBy(
+async function fetchIssueRelations(
   graphqlWithAuth: typeof graphql,
   owner: string,
   repo: string,
   issueNumber: number
-): Promise<number[]> {
+): Promise<{ blocked: number[]; parent: number | null }> {
   const query = `
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
@@ -146,6 +151,9 @@ async function fetchBlockedBy(
             nodes {
               number
             }
+          }
+          parent {
+            number
           }
         }
       }
@@ -159,12 +167,16 @@ async function fetchBlockedBy(
       number: issueNumber
     })
 
-    return result.repository.issue?.blockedBy?.nodes?.map((n) => n.number) || []
+    const blocked =
+      result.repository.issue?.blockedBy?.nodes?.map((n) => n.number) || []
+    const parent = result.repository.issue?.parent?.number || null
+
+    return { blocked, parent }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     core.warning(
-      `Failed to fetch blockedBy for issue #${issueNumber}: ${errorMessage}`
+      `Failed to fetch relations for issue #${issueNumber}: ${errorMessage}`
     )
-    return []
+    return { blocked: [], parent: null }
   }
 }
