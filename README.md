@@ -134,6 +134,8 @@ The action uses GitHub's "tracked issues" (sub-tasks) to determine blocking rela
 ## Example Output
 
 ```mermaid
+flowchart TD
+
 classDef open fill:#2da44e,color:#fff,stroke:#fff
 classDef closed fill:#57606a,color:#fff,stroke:#fff
 
