@@ -22,7 +22,7 @@ export interface StyleConfig {
 
 export const DEFAULT_CONFIG: StyleConfig = {
   colors: {
-    milestones: ['#e1f5fe', '#fff3e0', '#f3e5f5'],
+    milestones: ['#e1f5fe'],
     issues: {
       open: '#2da44e',
       closed: '#57606a'
