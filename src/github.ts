@@ -159,10 +159,12 @@ async function fetchBlockedBy(
       number: issueNumber
     })
 
-    return (
+    const blockedBy =
       result.repository.issue?.trackedInIssues?.nodes?.map((n) => n.number) ||
       []
-    )
+    core.info(`Issue #${issueNumber} blocked by: [${blockedBy.join(', ')}]`)
+
+    return blockedBy
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     core.warning(

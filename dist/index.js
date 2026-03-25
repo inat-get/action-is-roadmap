@@ -36883,8 +36883,10 @@ async function fetchBlockedBy(graphqlWithAuth, owner, repo, issueNumber) {
             repo,
             number: issueNumber
         });
-        return (result.repository.issue?.trackedInIssues?.nodes?.map((n) => n.number) ||
-            []);
+        const blockedBy = result.repository.issue?.trackedInIssues?.nodes?.map((n) => n.number) ||
+            [];
+        info(`Issue #${issueNumber} blocked by: [${blockedBy.join(', ')}]`);
+        return blockedBy;
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -39759,6 +39761,7 @@ function generateDiagram(milestones, issues, config) {
     lines.push('');
     // Track used nodes for dependency validation
     const issueNumbers = new Set(issues.map((i) => i.number));
+    info(`Available issue numbers in diagram: [${Array.from(issueNumbers).join(', ')}]`);
     // Group issues by milestone
     const issuesByMilestone = new Map();
     const orphanIssues = [];
@@ -39796,10 +39799,17 @@ function generateDiagram(milestones, issues, config) {
         lines.push('');
     // Dependencies (blockedBy relationships)
     // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
+    info(`Generating dependencies for ${issues.length} issues...`); // <-- СЮДА
+    // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
     for (const issue of issues) {
+        info(`Issue #${issue.number} has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`); // <-- СЮДА
         for (const blockerNum of issue.blockedBy) {
             if (issueNumbers.has(blockerNum)) {
                 lines.push(`I${blockerNum} --> I${issue.number}`);
+                info(`  Added arrow: I${blockerNum} --> I${issue.number}`); // <-- СЮДА
+            }
+            else {
+                info(`  Blocker #${blockerNum} not found in current issues set`); // <-- СЮДА
             }
         }
     }

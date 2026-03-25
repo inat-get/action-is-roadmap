@@ -1,5 +1,6 @@
 import { Issue, Milestone } from './github.js'
 import { StyleConfig } from './config.js'
+import * as core from '@actions/core'
 
 export function generateDiagram(
   milestones: Milestone[],
@@ -21,6 +22,9 @@ export function generateDiagram(
 
   // Track used nodes for dependency validation
   const issueNumbers = new Set(issues.map((i) => i.number))
+  core.info(
+    `Available issue numbers in diagram: [${Array.from(issueNumbers).join(', ')}]`
+  )
 
   // Group issues by milestone
   const issuesByMilestone = new Map<string, Issue[]>()
@@ -67,10 +71,20 @@ export function generateDiagram(
 
   // Dependencies (blockedBy relationships)
   // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
+  core.info(`Generating dependencies for ${issues.length} issues...`) // <-- СЮДА
+
+  // Logic: if A is blockedBy B, then B → A (blocker points to blocked)
   for (const issue of issues) {
+    core.info(
+      `Issue #${issue.number} has ${issue.blockedBy.length} blockers: [${issue.blockedBy.join(', ')}]`
+    ) // <-- СЮДА
+
     for (const blockerNum of issue.blockedBy) {
       if (issueNumbers.has(blockerNum)) {
         lines.push(`I${blockerNum} --> I${issue.number}`)
+        core.info(`  Added arrow: I${blockerNum} --> I${issue.number}`) // <-- СЮДА
+      } else {
+        core.info(`  Blocker #${blockerNum} not found in current issues set`) // <-- СЮДА
       }
     }
   }
