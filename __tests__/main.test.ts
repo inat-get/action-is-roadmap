@@ -4,7 +4,7 @@
 import { jest } from '@jest/globals'
 import * as core from '../__fixtures__/core.js'
 
-// Mock implementations - объявляем ДО всех unstable_mockModule
+// Mock implementations
 const mockedFetchData = jest.fn()
 const mockedGenerateDiagram = jest.fn().mockReturnValue('graph TD\nI1[Issue]')
 const mockedWriteOutput = jest.fn().mockResolvedValue(undefined)
@@ -21,8 +21,16 @@ const mockedLoadConfig = jest.fn().mockReturnValue({
   shapes: { issue: 'box' }
 })
 
-// Все моки должны быть объявлены ДО импорта тестируемого модуля
+// Мокируем модули ДО импорта тестируемого модуля
 jest.unstable_mockModule('@actions/core', () => core)
+jest.unstable_mockModule('@actions/github', () => ({
+  context: {
+    repo: {
+      owner: 'test-owner',
+      repo: 'test-repo'
+    }
+  }
+}))
 jest.unstable_mockModule('../src/github.js', () => ({
   fetchData: mockedFetchData
 }))
@@ -55,14 +63,14 @@ describe('main.ts', () => {
       return inputs[name] || ''
     })
 
-    // Reset mocks - используем mockClear вместо mockReset, чтобы сохранить implementations
+    // Reset mocks
     mockedFetchData.mockClear()
     mockedGenerateDiagram.mockClear()
     mockedWriteOutput.mockClear()
     core.setOutput.mockClear()
     core.setFailed.mockClear()
 
-    // Переустанавливаем mockReturnValue после clear (на всякий случай)
+    // Переустанавливаем mockReturnValue после clear
     mockedGenerateDiagram.mockReturnValue('graph TD\nI1[Issue]')
     mockedWriteOutput.mockResolvedValue(undefined)
   })
@@ -102,11 +110,13 @@ describe('main.ts', () => {
     // Verify fetchData was called
     expect(mockedFetchData).toHaveBeenCalledWith('fake-token', null)
 
-    // Verify generateDiagram was called
+    // Verify generateDiagram was called with owner and repo
     expect(mockedGenerateDiagram).toHaveBeenCalledWith(
       mockMilestones,
       mockIssues,
-      expect.any(Object)
+      expect.any(Object),
+      'test-owner', // Добавлено
+      'test-repo' // Добавлено
     )
 
     // Verify output was written
